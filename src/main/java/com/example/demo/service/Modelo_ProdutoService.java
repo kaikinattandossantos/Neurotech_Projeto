@@ -14,17 +14,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Serviço para gerenciar as operações de negócio da entidade Produto.
- */
+
+// Camada de serviço responsável pelas regras de negócio e operações da entidade Produto.
+
 @Service
 public class Modelo_ProdutoService {
 
     private final ProdutoRepository produtoRepository;
 
     /**
-     * Construtor com injeção de dependência. É a forma recomendada pelo Spring
-     * para injetar beans, promovendo um acoplamento mais fraco e facilitando testes.
+     * Construtor com injeção de dependência. 
      * @param produtoRepository O repositório de dados para a entidade Produto.
      */
     @Autowired
@@ -33,15 +32,14 @@ public class Modelo_ProdutoService {
     }
 
     /**
-     * Busca todos os produtos, permitindo filtragem por nome и ordenação.
-     * @param name Filtro opcional pelo nome do produto (case-insensitive).
-     * @param sort Critério de ordenação opcional (ex: "preco,asc").
+     * Busca uma lista de produtos, com suporte a filtro por nome e ordenação.
+     * @param name Filtro opcional pelo nome do produto (busca parcial, case-insensitive).
+     * @param sort Critério de ordenação opcional (ex: "preco,asc" ou "preco,desc"). A ordenação padrão é por nome.
      * @return Uma lista de DTOs de resposta dos produtos encontrados.
      */
     @Transactional(readOnly = true) // Otimização: indica ao JPA que esta transação não fará alterações no banco.
     public List<ProdutoResponseDTO> findAll(String name, String sort) {
-        // CORREÇÃO: Usar os nomes dos campos em camelCase para corresponder à Entidade.
-        Sort sortOrder = Sort.by("nome").ascending(); // Define uma ordenação padrão por nome ascendente.
+        Sort sortOrder = Sort.by("nome").ascending(); // Define uma ordenação padrão.
         
         if (sort != null) {
             if (sort.equalsIgnoreCase("preco,asc")) {
@@ -51,19 +49,17 @@ public class Modelo_ProdutoService {
             }
         }
 
+        // Verifica se a lista está vazia
         List<Modelo_Produto> produtos;
         if (name != null && !name.trim().isEmpty()) {
-            // Se um nome for fornecido, usa o método do repositório para buscar por nome (contendo, ignorando maiúsculas/minúsculas).
             produtos = produtoRepository.findByNomeContainingIgnoreCase(name, sortOrder);
         } else {
-            // Caso contrário, busca todos os produtos com a ordenação definida.
             produtos = produtoRepository.findAll(sortOrder);
         }
 
-        // Converte a lista de entidades (Modelo_Produto) para uma lista de DTOs de resposta (ProdutoResponseDTO) usando Stream API.
         return produtos.stream()
-                .map(ProdutoResponseDTO::new) // Para cada produto na lista, cria um novo ProdutoResponseDTO.
-                .collect(Collectors.toList()); // Coleta os resultados em uma nova lista.
+                .map(ProdutoResponseDTO::new)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -75,45 +71,45 @@ public class Modelo_ProdutoService {
     @Transactional(readOnly = true)
     public ProdutoResponseDTO findById(Long id) {
         Modelo_Produto produto = produtoRepository.findById(id)
-                // Se o produto não for encontrado, lança uma exceção personalizada.
                 .orElseThrow(() -> new ResourceNotFoundException("Produto não encontrado com o ID: " + id));
-        return new ProdutoResponseDTO(produto); // Converte a entidade para DTO de resposta.
+        return new ProdutoResponseDTO(produto);
     }
 
     /**
-     * Salva um novo produto no banco de dados.
+     * Cria e persiste um novo produto no banco de dados.
      * @param produtoDTO O DTO de requisição contendo os dados do novo produto.
      * @return O DTO de resposta do produto que foi salvo.
      */
     @Transactional
     public ProdutoResponseDTO save(ProdutoRequestDTO produtoDTO) {
-        // Converte o DTO de requisição para a entidade Modelo_Produto.
         Modelo_Produto produto = new Modelo_Produto();
         produto.setNome(produtoDTO.nome());
         produto.setDescricao(produtoDTO.descricao());
         produto.setPreco(produtoDTO.preco());
         produto.setQuantidadeEstoque(produtoDTO.quantidadeEstoque());
-        produto.setDataCriacao(LocalDateTime.now()); // A data de criação é gerenciada pelo servidor.
+        
+        // A data de criação é definida pelo servidor para garantir a integridade do dado.
+        produto.setDataCriacao(LocalDateTime.now());
 
-        // Salva a entidade no banco de dados.
         Modelo_Produto produtoSalvo = produtoRepository.save(produto);
-        return new ProdutoResponseDTO(produtoSalvo); // Retorna o DTO correspondente à entidade salva.
+        return new ProdutoResponseDTO(produtoSalvo);
     }
 
     /**
-     * Atualiza um produto existente.
+     * Atualiza um produto existente com base nos dados fornecidos.
+     * Apenas os campos não nulos do DTO de requisição serão atualizados.
      * @param id O ID do produto a ser atualizado.
-     * @param produtoDetailsDTO O DTO com os novos dados do produto. Campos nulos são ignorados.
+     * @param produtoDetailsDTO O DTO com os novos dados do produto.
      * @return O DTO de resposta do produto atualizado.
      * @throws ResourceNotFoundException se o produto não for encontrado.
      */
     @Transactional
     public ProdutoResponseDTO update(Long id, ProdutoRequestDTO produtoDetailsDTO) {
-        // Busca a entidade existente no banco de dados.
         Modelo_Produto existingProduto = produtoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produto não encontrado para atualização com o ID: " + id));
 
-        // Lógica de atualização parcial (PATCH): só atualiza os campos que não forem nulos no DTO.
+        // Lógica de atualização parcial: só atualiza os campos que não forem nulos no DTO.
+        // Isso permite que o cliente envie apenas os campos que deseja alterar.
         if (produtoDetailsDTO.nome() != null) {
             existingProduto.setNome(produtoDetailsDTO.nome());
         }
@@ -127,19 +123,17 @@ public class Modelo_ProdutoService {
             existingProduto.setQuantidadeEstoque(produtoDetailsDTO.quantidadeEstoque());
         }
 
-        // Salva as alterações no banco de dados.
         Modelo_Produto produtoAtualizado = produtoRepository.save(existingProduto);
         return new ProdutoResponseDTO(produtoAtualizado);
     }
 
     /**
-     * Deleta um produto pelo seu ID.
      * @param id O ID do produto a ser deletado.
-     * @throws ResourceNotFoundException se o produto não for encontrado.
+     * @throws ResourceNotFoundException se o produto não for encontrado, garantindo um feedback claro ao cliente.
      */
     @Transactional
     public void deleteById(Long id) {
-        // Verifica se o produto existe antes de tentar deletar para fornecer uma mensagem de erro clara.
+        // Verifica se o produto existe antes de tentar deletar para fornecer uma mensagem de erro mais clara.
         if (!produtoRepository.existsById(id)) {
             throw new ResourceNotFoundException("Produto não encontrado para remoção com o ID: " + id);
         }
