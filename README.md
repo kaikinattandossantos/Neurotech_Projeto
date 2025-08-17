@@ -75,7 +75,7 @@ spring.jpa.hibernate.ddl-auto=update
 1. **Clone o repositório**:
    ```bash
    git clone https://github.com/kaikinattandossantos/Neurotech_Projeto.git
-   cd Neurotech_Projeto_Projeto/demo
+   cd Neurotech_Projeto
    ```
 
 2. **Construa o projeto**:
