@@ -97,11 +97,13 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- JWT -->
+        <!-- Spring Boot Starter Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+
+        <!-- JJWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -121,7 +123,10 @@
         </dependency>
 
 
+
     </dependencies>
+
+
 
     <build>
         <plugins>
